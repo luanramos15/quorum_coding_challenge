@@ -56,7 +56,9 @@ defmodule QuorumCodingChallenge.CsvImporter do
       file_path = Path.join(tables_path, filename)
 
       if File.exists?(file_path) do
-        IO.puts("Importing #{filename}...")
+        unless Mix.env() == :test do
+          IO.puts("Importing #{filename}...")
+        end
         initial_count = Repo.aggregate(config.schema, :count, :id)
 
         file_path
@@ -68,13 +70,21 @@ defmodule QuorumCodingChallenge.CsvImporter do
 
         final_count = Repo.aggregate(config.schema, :count, :id)
         new_records = final_count - initial_count
-        IO.puts("  #{new_records} new records added (total: #{final_count})")
+        unless Mix.env() == :test do
+          IO.puts("  #{new_records} new records added (total: #{final_count})")
+        end
       else
-        IO.puts("Warning: #{filename} not found at #{file_path}")
+        unless Mix.env() == :test do
+          IO.puts("Warning: #{filename} not found at #{file_path}")
+        end
       end
     else
-      IO.puts("Warning: No configuration found for #{filename}")
+      unless Mix.env() == :test do
+        IO.puts("Warning: No configuration found for #{filename}")
+      end
     end
+
+    :ok
   end
 
   @doc """
@@ -144,7 +154,9 @@ defmodule QuorumCodingChallenge.CsvImporter do
       id when is_integer(id) ->
         case Repo.get(schema, id) do
           nil ->
-            IO.puts("Warning: #{key} #{id} not found, setting to nil")
+            unless Mix.env() == :test do
+              IO.puts("Warning: #{key} #{id} not found, setting to nil")
+            end
             Map.put(attrs, key, nil)
           _exists -> attrs
         end

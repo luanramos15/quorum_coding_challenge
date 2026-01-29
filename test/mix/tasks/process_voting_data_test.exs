@@ -24,6 +24,32 @@ defmodule Mix.Tasks.ProcessVotingDataTest do
   end
 
   describe "process_voting_data mix task" do
+    test "Mix.Tasks.ProcessVotingData.run/1 executes successfully" do
+      # Create test input files
+      create_test_input_files()
+
+      # Capture IO to suppress output during test
+      output = ExUnit.CaptureIO.capture_io(fn ->
+        Mix.Tasks.ProcessVotingData.run([])
+      end)
+
+      # Check that the task ran and produced output
+      assert String.contains?(output, "🧹 Cleaning up existing output files...")
+      assert String.contains?(output, "🔄 Importing CSV data...")
+      assert String.contains?(output, "✅ Data import completed")
+      assert String.contains?(output, "🔄 Generating legislator support/oppose report...")
+      assert String.contains?(output, "🔄 Generating bills report...")
+      assert String.contains?(output, "✅ All reports generated successfully!")
+
+      # Check that output files were created
+      assert File.exists?("tables/output/legislators-support-oppose-count.csv")
+      assert File.exists?("tables/output/bills.csv")
+
+      # Clean up
+      File.rm_rf!("tables/output")
+      File.rm_rf!("tables/input")
+    end
+
     test "generates correct legislator support/oppose report" do
       # Call the test helper function to generate the report
       generate_test_legislator_report()
@@ -242,4 +268,43 @@ defmodule Mix.Tasks.ProcessVotingDataTest do
   end
 
   defp escape_csv_field(field), do: to_string(field)
+
+  defp create_test_input_files do
+    File.mkdir_p!("tables/input")
+
+    # Create legislators.csv
+    legislators_content = """
+    id,name
+    1,John Doe
+    2,Jane Smith
+    3,Bob Johnson
+    """
+    File.write!("tables/input/legislators.csv", legislators_content)
+
+    # Create bills.csv
+    bills_content = """
+    id,title,sponsor_id
+    101,Test Bill 1,1
+    102,Test Bill 2,2
+    """
+    File.write!("tables/input/bills.csv", bills_content)
+
+    # Create votes.csv
+    votes_content = """
+    id,bill_id
+    201,101
+    202,102
+    """
+    File.write!("tables/input/votes.csv", votes_content)
+
+    # Create vote_results.csv
+    vote_results_content = """
+    id,legislator_id,vote_id,vote_type
+    301,1,201,1
+    302,2,201,2
+    303,1,202,1
+    304,3,202,2
+    """
+    File.write!("tables/input/vote_results.csv", vote_results_content)
+  end
 end
