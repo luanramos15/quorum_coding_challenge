@@ -36,22 +36,24 @@ defmodule QuorumCodingChallenge.CsvImporter do
   @doc """
   Import all CSV files in the correct order based on dependencies.
   """
-  def import_all do
+  def import_all(custom_path \\ nil) do
+    tables_path = custom_path || @tables_path
 
     import_order = get_import_order()
 
     Enum.each(import_order, fn filename ->
-      import_csv_file(filename)
+      import_csv_file(filename, tables_path)
     end)
   end
 
   @doc """
   Import a specific CSV file.
   """
-  def import_csv_file(filename) do
+  def import_csv_file(filename, custom_path \\ nil) do
     config = @import_config[filename]
     if config do
-      file_path = Path.join(@tables_path, filename)
+      tables_path = custom_path || @tables_path
+      file_path = Path.join(tables_path, filename)
 
       if File.exists?(file_path) do
         IO.puts("Importing #{filename}...")
@@ -107,12 +109,14 @@ defmodule QuorumCodingChallenge.CsvImporter do
   defp insert_row(schema, columns, row) do
     attrs =
       columns
-      |> Enum.with_index()
-      |> Enum.reduce(%{}, fn {column, index}, acc ->
-        value = row |> Map.values() |> Enum.at(index)
+      |> Enum.reduce(%{}, fn column, acc ->
+        # Convert atom column name to string to match CSV headers
+        column_name = Atom.to_string(column)
+        value = Map.get(row, column_name)
         processed_value = process_value(column, value)
         Map.put(acc, column, processed_value)
       end)
+      |> validate_foreign_keys()
 
     # Check if record already exists by ID
     case Repo.get(schema, attrs[:id]) do
@@ -123,6 +127,28 @@ defmodule QuorumCodingChallenge.CsvImporter do
       _existing ->
         # Record exists, skip it (or could update if needed)
         :ok
+    end
+  end
+
+  defp validate_foreign_keys(attrs) do
+    attrs
+    |> validate_foreign_key(:sponsor_id, Legislator)
+    |> validate_foreign_key(:legislator_id, Legislator)
+    |> validate_foreign_key(:bill_id, Bill)
+    |> validate_foreign_key(:vote_id, Vote)
+  end
+
+  defp validate_foreign_key(attrs, key, schema) do
+    case Map.get(attrs, key) do
+      nil -> attrs
+      id when is_integer(id) ->
+        case Repo.get(schema, id) do
+          nil ->
+            IO.puts("Warning: #{key} #{id} not found, setting to nil")
+            Map.put(attrs, key, nil)
+          _exists -> attrs
+        end
+      _ -> attrs
     end
   end
 
