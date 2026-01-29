@@ -62,6 +62,3 @@ Thumbs.db
 # Logs
 *.log
 
-# Generated output files
-/tables/output/
-

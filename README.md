@@ -160,7 +160,7 @@ test/
 └── mix/tasks/                  # Task integration tests
 tables/
 ├── input/                      # Source CSV files
-└── output/                     # Generated reports (gitignored)
+└── output/                     # Generated reports
 ```
 
 ## 🛠️ Key Technologies
